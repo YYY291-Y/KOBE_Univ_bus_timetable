@@ -70,6 +70,14 @@ summary{cursor:pointer;color:#52647a;font-size:13px}
   .start-badge-container{min-height:22px}
 }
 </style>
+
+<style>
+#appUpdateNotice{position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;display:none;
+max-width:720px;margin:auto;background:#172033;color:#fff;padding:14px 16px;border-radius:14px;
+box-shadow:0 6px 24px #0004;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
+#appUpdateNotice button{border:0;border-radius:9px;padding:10px 14px;background:#a8e063;color:#172033;font-weight:700;white-space:nowrap}
+</style>
+
 </head>
 <body>
 <main class="wrap">
@@ -102,6 +110,7 @@ summary{cursor:pointer;color:#52647a;font-size:13px}
       <div style="margin-bottom:12px">
         <label class="label" for="dayTypeSub" style="margin-bottom:6px;display:block">運転日ダイヤ指定</label>
         <select id="dayTypeSub">
+          <option value="AUTO" selected>自動判定（今日）</option>
           <option value="WD_CLASS">月～木（授業日）</option>
           <option value="WD_OFF">月～木（休校日）</option>
           <option value="FRI_CLASS">金（授業日）</option>
@@ -212,22 +221,58 @@ function eligible(row,d,origin){
   return route==='36'&&target===d.target;
 }
 
-function getActiveDayType(){
-  const subVal = $('dayTypeSub')?.value;
-  return subVal || 'WD_CLASS';
+// 2026年度 神戸大学学年暦（授業期間・予備日・大学休業日）
+const academicCalendar = {
+  classPeriods: [
+    ['2026-04-08', '2026-06-08'],
+    ['2026-06-10', '2026-08-05'],
+    ['2026-10-01', '2026-11-30'],
+    ['2026-12-02', '2027-02-08']
+  ],
+  reserveDays: [
+    '2026-06-09', '2026-08-06', '2026-12-01',
+    '2027-01-14', '2027-02-09'
+  ],
+  universityClosedPeriods: [['2026-12-29', '2027-01-04']],
+  // 2026年度の祝日（授業なし）
+  holidays: [
+    '2026-04-29', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06',
+    '2026-07-20', '2026-08-11', '2026-09-21', '2026-09-22', '2026-09-23',
+    '2026-10-12', '2026-11-03', '2026-11-23',
+    '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23'
+  ]
+};
+
+function dateKey(date){
+  const y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0'), d=String(date.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
 }
 
-// 今日の自動判定ダイヤ取得関数
+function isClassDay(date){
+  const day=date.getDay(), key=dateKey(date);
+  if(day===0 || day===6 || academicCalendar.holidays.includes(key)) return false;
+  const inPeriod=academicCalendar.classPeriods.some(([start,end])=>key>=start && key<=end);
+  if(!inPeriod || academicCalendar.reserveDays.includes(key)) return false;
+  if(academicCalendar.universityClosedPeriods.some(([start,end])=>key>=start && key<=end)) return false;
+  return true;
+}
+
 function getTodayAutoDayType(){
-  const now = new Date();
-  const day = now.getDay(); // 0:日, 1:月, ..., 5:金, 6:土
-  if (day === 0 || day === 6) {
-    return { code: 'HT', label: '土日祝ダイヤ' };
-  } else if (day === 5) {
-    return { code: 'FRI_CLASS', label: '金曜（授業日）ダイヤ' };
-  } else {
-    return { code: 'WD_CLASS', label: '月～木（授業日）ダイヤ' };
-  }
+  const now=new Date(), day=now.getDay();
+  if(day===0 || day===6 || academicCalendar.holidays.includes(dateKey(now)))
+    return {code:'HT', label:'土日祝ダイヤ'};
+  const classDay=isClassDay(now);
+  if(day===5) return classDay
+    ? {code:'FRI_CLASS', label:'金曜（授業日）ダイヤ'}
+    : {code:'FRI_OFF', label:'金曜（休校日）ダイヤ'};
+  return classDay
+    ? {code:'WD_CLASS', label:'月～木（授業日）ダイヤ'}
+    : {code:'WD_OFF', label:'月～木（休校日）ダイヤ'};
+}
+
+function getActiveDayType(){
+  const subVal=$('dayTypeSub')?.value || 'AUTO';
+  return subVal==='AUTO' ? getTodayAutoDayType().code : subVal;
 }
 
 // 運転日判定ロジック（operating関数）
@@ -384,5 +429,73 @@ function scheduleMinute(){
 }
 scheduleMinute();
 </script>
+<div id="appUpdateNotice" role="status" aria-live="polite"><span>新しいバージョンがあります。</span><button id="appUpdateButton" type="button">今すぐ更新</button></div>
+
+<script>
+(() => {
+  if (!('serviceWorker' in navigator)) return;
+  const CHECK_KEY = 'kobeBusLastUpdateCheck';
+  let refreshing = false;
+  let registrationRef = null;
+
+  function showUpdateNotice() {
+    const notice = document.getElementById('appUpdateNotice');
+    if (notice) notice.style.display = 'flex';
+  }
+
+  function hideUpdateNotice() {
+    const notice = document.getElementById('appUpdateNotice');
+    if (notice) notice.style.display = 'none';
+  }
+
+  async function checkForUpdate(registration) {
+    try {
+      await registration.update();
+      localStorage.setItem(CHECK_KEY, String(Date.now()));
+    } catch (error) {
+      console.info('更新確認を延期しました（通信できない場合は通常どおり利用できます）。', error);
+    }
+  }
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      registrationRef = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+      if (registrationRef.waiting && navigator.serviceWorker.controller) showUpdateNotice();
+
+      registrationRef.addEventListener('updatefound', () => {
+        const installing = registrationRef.installing;
+        if (!installing) return;
+        installing.addEventListener('statechange', () => {
+          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateNotice();
+          }
+        });
+      });
+
+      const lastCheck = Number(localStorage.getItem(CHECK_KEY) || 0);
+      if (!lastCheck || Date.now() - lastCheck >= 24 * 60 * 60 * 1000) {
+        await checkForUpdate(registrationRef);
+      }
+    } catch (error) {
+      console.info('自動更新機能を利用できません。アプリは通常どおり利用できます。', error);
+    }
+  });
+
+  document.addEventListener('click', event => {
+    if (event.target && event.target.id === 'appUpdateButton' && registrationRef && registrationRef.waiting) {
+      event.target.disabled = true;
+      event.target.textContent = '更新中…';
+      registrationRef.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
