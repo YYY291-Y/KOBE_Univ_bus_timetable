@@ -71,19 +71,12 @@ summary{cursor:pointer;color:#52647a;font-size:13px}
 }
 </style>
 
-<style>
-#appUpdateNotice{position:fixed;left:12px;right:12px;bottom:12px;z-index:99999;display:none;
-max-width:720px;margin:auto;background:#172033;color:#fff;padding:14px 16px;border-radius:14px;
-box-shadow:0 6px 24px #0004;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
-#appUpdateNotice button{border:0;border-radius:9px;padding:10px 14px;background:#a8e063;color:#172033;font-weight:700;white-space:nowrap}
-</style>
-
 </head>
 <body>
 <main class="wrap">
   <header class="hero">
     <div class="eyebrow">KOBE UNIVERSITY BUS TIMETABLE</div>
-    <h1>神大いバス時刻表 TSURU-Navi</h1>
+    <h1>神大 バス時刻表 TSURU-Navi</h1>
     <p>行き先と乗車停留所を選んで、次のバスを確認</p>
   </header>
 
@@ -429,71 +422,54 @@ function scheduleMinute(){
 }
 scheduleMinute();
 </script>
-<div id="appUpdateNotice" role="status" aria-live="polite"><span>新しいバージョンがあります。</span><button id="appUpdateButton" type="button">今すぐ更新</button></div>
-
 <script>
 (() => {
   if (!('serviceWorker' in navigator)) return;
+
   const CHECK_KEY = 'kobeBusLastUpdateCheck';
-  let refreshing = false;
-  let registrationRef = null;
+  const CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+  let registration = null;
+  let reloading = false;
 
-  function showUpdateNotice() {
-    const notice = document.getElementById('appUpdateNotice');
-    if (notice) notice.style.display = 'flex';
-  }
+  async function checkAndUpdate() {
+    if (!registration) return;
+    const lastCheck = Number(localStorage.getItem(CHECK_KEY) || 0);
+    if (lastCheck && Date.now() - lastCheck < CHECK_INTERVAL) return;
 
-  function hideUpdateNotice() {
-    const notice = document.getElementById('appUpdateNotice');
-    if (notice) notice.style.display = 'none';
-  }
-
-  async function checkForUpdate(registration) {
     try {
+      // サーバー上のsw.jsを確認。新しいSWはsw.js側のskipWaitingで即時適用される。
       await registration.update();
       localStorage.setItem(CHECK_KEY, String(Date.now()));
     } catch (error) {
-      console.info('更新確認を延期しました（通信できない場合は通常どおり利用できます）。', error);
+      // オフライン・通信失敗時は現在のキャッシュで利用を継続。
+      console.info('更新確認に失敗しました。現在の版で利用を続けます。', error);
     }
   }
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (refreshing) return;
-    refreshing = true;
+    if (reloading) return;
+    reloading = true;
     window.location.reload();
   });
 
-  window.addEventListener('load', async () => {
+  async function initializeAutoUpdate() {
     try {
-      registrationRef = await navigator.serviceWorker.register('./sw.js', { scope: './' });
-      if (registrationRef.waiting && navigator.serviceWorker.controller) showUpdateNotice();
+      registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
 
-      registrationRef.addEventListener('updatefound', () => {
-        const installing = registrationRef.installing;
-        if (!installing) return;
-        installing.addEventListener('statechange', () => {
-          if (installing.state === 'installed' && navigator.serviceWorker.controller) {
-            showUpdateNotice();
-          }
-        });
-      });
-
-      const lastCheck = Number(localStorage.getItem(CHECK_KEY) || 0);
-      if (!lastCheck || Date.now() - lastCheck >= 24 * 60 * 60 * 1000) {
-        await checkForUpdate(registrationRef);
-      }
+      // 初回起動時は必ず確認。以後は24時間ごと。
+      await checkAndUpdate();
     } catch (error) {
       console.info('自動更新機能を利用できません。アプリは通常どおり利用できます。', error);
     }
-  });
+  }
 
-  document.addEventListener('click', event => {
-    if (event.target && event.target.id === 'appUpdateButton' && registrationRef && registrationRef.waiting) {
-      event.target.disabled = true;
-      event.target.textContent = '更新中…';
-      registrationRef.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
+  window.addEventListener('load', initializeAutoUpdate, { once: true });
+
+  // スリープ・バックグラウンドから復帰した場合も、24時間経過していれば確認。
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkAndUpdate();
   });
+  window.addEventListener('pageshow', checkAndUpdate);
 })();
 </script>
 
