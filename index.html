@@ -427,7 +427,7 @@ scheduleMinute();
   if (!('serviceWorker' in navigator)) return;
 
   const CHECK_KEY = 'kobeBusLastUpdateCheck';
-  const CHECK_INTERVAL = 24 * 60 * 60 * 1000;
+  const CHECK_INTERVAL = 4 * 60 * 60 * 1000;
   let registration = null;
   let reloading = false;
 
@@ -456,7 +456,7 @@ scheduleMinute();
     try {
       registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
 
-      // 初回起動時は必ず確認。以後は24時間ごと。
+      // 初回起動時は必ず確認。以後は4時間ごと。
       await checkAndUpdate();
     } catch (error) {
       console.info('自動更新機能を利用できません。アプリは通常どおり利用できます。', error);
