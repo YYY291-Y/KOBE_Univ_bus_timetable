@@ -384,26 +384,48 @@ function getTodayAutoDayType() {
   const key = dateKey(now);
 
   // ① 大学休業期間は最優先で休み
-  if (isUniversityClosed(key)) {
+if (isUniversityClosed(key)) {
+  return getNormalOffDayType(now);
+}
+
+// ② 大学指定の振替日・個別指定
+const override =
+  academicCalendar.calendarOverrides[key];
+
+if (override) {
+  const type = classDayToType(override.classDay);
+
+  if (type === 'OFF') {
+    return getNormalOffDayType(now);
+  }
+}
+  function getNormalOffDayType(now) {
+  const day = now.getDay();
+  const key = dateKey(now);
+
+  if (
+    day === 0 ||
+    day === 6 ||
+    academicCalendar.holidays.includes(key)
+  ) {
     return {
-      code: getOffDayType(now),
-      label: '大学休業日ダイヤ'
+      code: 'HT',
+      label: '土日祝ダイヤ'
     };
   }
 
-  // ② 大学指定の振替日・個別指定
-  const override =
-    academicCalendar.calendarOverrides[key];
+  if (day === 5) {
+    return {
+      code: 'FRI_OFF',
+      label: '金曜（休校日）ダイヤ'
+    };
+  }
 
-  if (override) {
-    const type = classDayToType(override.classDay);
-
-    if (type === 'OFF') {
-      return {
-        code: getOffDayType(now),
-        label: '大学指定休業日ダイヤ'
-      };
-    }
+  return {
+    code: 'WD_OFF',
+    label: '月～木（休校日）ダイヤ'
+  };
+}
 
     if (type === 'WD_CLASS') {
       return {
