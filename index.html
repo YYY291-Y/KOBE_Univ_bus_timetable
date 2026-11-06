@@ -421,16 +421,16 @@ if (override) {
 
     if (type === 'WD_CLASS') {
   const dayNames = {
-    MON: '月曜日',
-    TUE: '火曜日',
-    WED: '水曜日',
-    THU: '木曜日',
-    FRI: '金曜日'
+    MON: '月曜',
+    TUE: '火曜',
+    WED: '水曜',
+    THU: '木曜',
+    FRI: '金曜'
   };
 
   return {
     code: 'WD_CLASS',
-    label: `${dayNames[override.classDay]}の授業実施日`
+    label: `${dayNames[override.classDay]}授業実施日`
   };
 }
 
