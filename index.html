@@ -383,42 +383,58 @@ function getTodayAutoDayType() {
   const day = now.getDay();
   const key = dateKey(now);
 
-  // ① 大学休業期間は最優先で休み
-  if (isUniversityClosed(key)) {
+// ① 大学休業期間は最優先で休み
+if (isUniversityClosed(key)) {
+  return {
+    code: getOffDayType(now),
+    label: getOffDayLabel(now)
+  };
+}
+
+// ② 大学指定の振替日・個別指定
+const override =
+  academicCalendar.calendarOverrides[key];
+
+if (override) {
+  const type = classDayToType(override.classDay);
+
+  if (type === 'OFF') {
     return {
       code: getOffDayType(now),
-      label: '大学休業日ダイヤ'
+      label: getOffDayLabel(now)
     };
   }
 
-  // ② 大学指定の振替日・個別指定
-  const override =
-    academicCalendar.calendarOverrides[key];
+  function getOffDayLabel(date) {
+  const day = date.getDay();
 
-  if (override) {
-    const type = classDayToType(override.classDay);
+  if (day >= 1 && day <= 4) {
+    return '月～木（休校日）ダイヤ';
+  }
 
-    if (type === 'OFF') {
-      return {
-        code: getOffDayType(now),
-        label: '大学指定休業日ダイヤ'
-      };
-    }
+  if (day === 5) {
+    return '金曜（休校日）ダイヤ';
+  }
+
+  return '土日祝ダイヤ';
+}
 
     if (type === 'WD_CLASS') {
-      return {
-        code: 'WD_CLASS',
-        label: `${override.classDay}曜日の授業実施日`
-      };
-    }
+  const dayNames = {
+    MON: '月曜日',
+    TUE: '火曜日',
+    WED: '水曜日',
+    THU: '木曜日',
+    FRI: '金曜日'
+  };
 
-    if (type === 'FRI_CLASS') {
-      return {
-        code: 'FRI_CLASS',
-        label: '金曜日の授業実施日'
-      };
-    }
-  }
+  return {
+    code: 'WD_CLASS',
+    label: `${dayNames[override.classDay]}の授業実施日`
+  };
+}
+
+    
 
   // ③ 土日・祝日は休み
   if (
