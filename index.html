@@ -1,4 +1,4 @@
- <!doctype html>
+<!doctype html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -221,288 +221,80 @@ function eligible(row,d,origin){
   return route==='36'&&target===d.target;
 }
 
-// 2026年度 神戸大学学年暦
+// 2026年度 神戸大学学年暦（授業期間・予備日・大学休業日）
 const academicCalendar = {
-  // 通常の授業期間
   classPeriods: [
     ['2026-04-08', '2026-06-08'],
     ['2026-06-10', '2026-08-05'],
     ['2026-10-01', '2026-11-30'],
     ['2026-12-02', '2027-02-08']
   ],
-
-  // 予備日（授業なし）
   reserveDays: [
-    '2026-06-09',
-    '2026-08-06',
-    '2026-12-01',
-    '2027-01-14',
-    '2027-02-09'
+    '2026-06-09', '2026-08-06', '2026-12-01',
+    '2027-01-14', '2027-02-09'
   ],
-
-  // 大学休業期間
-  universityClosedPeriods: [
-    ['2026-12-29', '2027-01-04']
-  ],
-
-  // 国民の祝日（授業なし）
+  universityClosedPeriods: [['2026-12-29', '2027-01-04']],
+  // 2026年度の祝日（授業なし）
   holidays: [
-    '2026-04-29',
-    '2026-05-03',
-    '2026-05-04',
-    '2026-05-05',
-    '2026-05-06',
-    '2026-07-20',
-    '2026-08-11',
-    '2026-09-21',
-    '2026-09-22',
-    '2026-09-23',
-    '2026-10-12',
-    '2026-11-03',
-    '2026-11-23',
-    '2027-01-01',
-    '2027-01-11',
-    '2027-02-11',
-    '2027-02-23'
-  ],
-
-  // 大学指定の振替授業日
-  // classDayには「実施する授業の曜日」を指定する
-  // MON / TUE / WED / THU / FRI / OFF
-  calendarOverrides: {
-    '2026-05-07': { classDay: 'TUE' },
-    '2026-05-08': { classDay: 'WED' },
-    '2026-07-22': { classDay: 'MON' },
-    '2026-10-15': { classDay: 'MON' },
-    '2026-11-06': { classDay: 'TUE' },
-    '2027-01-13': { classDay: 'MON' }
-  }
+    '2026-04-29', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06',
+    '2026-07-20', '2026-08-11', '2026-09-21', '2026-09-22', '2026-09-23',
+    '2026-10-12', '2026-11-03', '2026-11-23',
+    '2027-01-01', '2027-01-11', '2027-02-11', '2027-02-23'
+  ]
 };
 
-
-// 日付をYYYY-MM-DD形式に変換
-function dateKey(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
+function dateKey(date){
+  const y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0'), d=String(date.getDate()).padStart(2,'0');
   return `${y}-${m}-${d}`;
 }
 
-
-// 指定した日付が期間内か判定
-function isInPeriods(key, periods) {
-  return periods.some(([start, end]) =>
-    key >= start && key <= end
-  );
-}
-
-
-// 大学休業日の判定
-function isUniversityClosed(key) {
-  return isInPeriods(
-    key,
-    academicCalendar.universityClosedPeriods
-  );
-}
-
-
-// 通常の授業日か判定
-function isClassDay(date) {
-  const day = date.getDay();
-  const key = dateKey(date);
-
-  // 土日・祝日
-  if (
-    day === 0 ||
-    day === 6 ||
-    academicCalendar.holidays.includes(key)
-  ) {
-    return false;
-  }
-
-  // 授業期間外
-  const inPeriod = isInPeriods(
-    key,
-    academicCalendar.classPeriods
-  );
-
-  if (!inPeriod) return false;
-
-  // 予備日・大学休業日
-  if (
-    academicCalendar.reserveDays.includes(key) ||
-    isUniversityClosed(key)
-  ) {
-    return false;
-  }
-
+function isClassDay(date){
+  const day=date.getDay(), key=dateKey(date);
+  if(day===0 || day===6 || academicCalendar.holidays.includes(key)) return false;
+  const inPeriod=academicCalendar.classPeriods.some(([start,end])=>key>=start && key<=end);
+  if(!inPeriod || academicCalendar.reserveDays.includes(key)) return false;
+  if(academicCalendar.universityClosedPeriods.some(([start,end])=>key>=start && key<=end)) return false;
   return true;
 }
 
-
-// 指定された授業曜日をアプリのダイヤ区分に変換
-function classDayToType(classDay) {
-
-  if (classDay === 'OFF') {
-    return 'OFF';
-  }
-
-  if (classDay === 'FRI') {
-    return 'FRI_CLASS';
-  }
-
-  if (
-    ['MON', 'TUE', 'WED', 'THU'].includes(classDay)
-  ) {
-    return 'WD_CLASS';
-  }
-
-  return null;
-}
-
-
-// 休みの日に適用するダイヤ区分
-function getOffDayType(date) {
-  const day = date.getDay();
-
-  if (day === 5) {
-    return 'FRI_OFF';
-  }
-
-  if (day === 0 || day === 6) {
-    return 'HT';
-  }
-
-  return 'WD_OFF';
-}
-
-
-// 自動ダイヤ判定
-function getTodayAutoDayType() {
-  const now = new Date();
-  const day = now.getDay();
-  const key = dateKey(now);
-
-// ③ 土日・祝日は休み
-  if (
-    day === 0 ||
-    day === 6 ||
-    academicCalendar.holidays.includes(key)
-  ) {
-    return {
-      code: 'HT',
-      label: '土日祝ダイヤ'
-    };
-  }
-
-  // ④ 通常の授業日・休校日
-  const classDay = isClassDay(now);
-
-  if (day === 5) {
-    return classDay
-      ? {
-          code: 'FRI_CLASS',
-          label: '金曜（授業日）ダイヤ'
-        }
-      : {
-          code: 'FRI_OFF',
-          label: '金曜（休校日）ダイヤ'
-        };
-  }
-
+function getTodayAutoDayType(){
+  const now=new Date(), day=now.getDay();
+  if(day===0 || day===6 || academicCalendar.holidays.includes(dateKey(now)))
+    return {code:'HT', label:'土日祝ダイヤ'};
+  const classDay=isClassDay(now);
+  if(day===5) return classDay
+    ? {code:'FRI_CLASS', label:'金曜（授業日）ダイヤ'}
+    : {code:'FRI_OFF', label:'金曜（休校日）ダイヤ'};
   return classDay
-    ? {
-        code: 'WD_CLASS',
-        label: '月～木（授業日）ダイヤ'
-      }
-    : {
-        code: 'WD_OFF',
-        label: '月～木（休校日）ダイヤ'
-      };
+    ? {code:'WD_CLASS', label:'月～木（授業日）ダイヤ'}
+    : {code:'WD_OFF', label:'月～木（休校日）ダイヤ'};
 }
 
-  // ③ 土日・祝日は休み
-  if (
-    day === 0 ||
-    day === 6 ||
-    academicCalendar.holidays.includes(key)
-  ) {
-    return {
-      code: 'HT',
-      label: '土日祝ダイヤ'
-    };
-  }
-
-  // ④ 通常の授業日・休校日
-  const classDay = isClassDay(now);
-
-  if (day === 5) {
-    return classDay
-      ? {
-          code: 'FRI_CLASS',
-          label: '金曜（授業日）ダイヤ'
-        }
-      : {
-          code: 'FRI_OFF',
-          label: '金曜（休校日）ダイヤ'
-        };
-  }
-
-  return classDay
-    ? {
-        code: 'WD_CLASS',
-        label: '月～木（授業日）ダイヤ'
-      }
-    : {
-        code: 'WD_OFF',
-        label: '月～木（休校日）ダイヤ'
-      };
+function getActiveDayType(){
+  const subVal=$('dayTypeSub')?.value || 'AUTO';
+  return subVal==='AUTO' ? getTodayAutoDayType().code : subVal;
 }
 
-
-// 選択中のダイヤ区分
-function getActiveDayType() {
-  const subVal = $('dayTypeSub')?.value || 'AUTO';
-
-  return subVal === 'AUTO'
-    ? getTodayAutoDayType().code
-    : subVal;
-}
-
-
-// 運転日判定ロジック
-function operating(row) {
+// 運転日判定ロジック（operating関数）
+function operating(row){
   const mark = row['運転日識別記号'] || '';
   const selected = getActiveDayType();
-
-  if (selected === 'WD_CLASS') {
-    return mark === 'WD' ||
-      mark === 'WD_NOT_FRI' ||
-      mark === 'WD_HOL' ||
-      mark === 'WD_DIRECT';
+  
+  if(selected === 'WD_CLASS') {
+    return mark === 'WD' || mark === 'WD_NOT_FRI' || mark === 'WD_HOL' || mark === 'WD_DIRECT';
   }
-
-  if (selected === 'WD_OFF') {
+  if(selected === 'WD_OFF') {
     return mark === 'WD';
   }
-
-  if (selected === 'FRI_CLASS') {
-    return mark === 'WD' ||
-      mark === 'WD_FRI' ||
-      mark === 'WD_HOL';
+  if(selected === 'FRI_CLASS') {
+    return mark === 'WD' || mark === 'WD_FRI' || mark === 'WD_HOL';
   }
-
-  if (selected === 'FRI_OFF') {
+  if(selected === 'FRI_OFF') {
     return mark === 'WD';
   }
-
-  if (selected === 'HT') {
-    return mark === 'HT' ||
-      mark === 'SAT' ||
-      mark === 'SUN' ||
-      mark === 'HOL';
+  if(selected === 'HT') {
+    return mark === 'HT' || mark === 'SAT' || mark === 'SUN' || mark === 'HOL';
   }
-
   return false;
 }
 
