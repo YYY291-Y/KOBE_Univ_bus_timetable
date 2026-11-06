@@ -234,6 +234,15 @@ const academicCalendar = {
     '2027-01-14', '2027-02-09'
   ],
   universityClosedPeriods: [['2026-12-29', '2027-01-04']],
+  // 授業の振替日（実際に実施する授業曜日）
+  classDayOverrides: {
+    '2026-05-07': 'TUE',
+    '2026-05-08': 'WED',
+    '2026-07-22': 'MON',
+    '2026-10-15': 'MON',
+    '2026-11-06': 'TUE',
+    '2027-01-13': 'MON'
+  }
   // 2026年度の祝日（授業なし）
   holidays: [
     '2026-04-29', '2026-05-03', '2026-05-04', '2026-05-05', '2026-05-06',
@@ -258,13 +267,31 @@ function isClassDay(date){
 }
 
 function getTodayAutoDayType(){
-  const now=new Date(), day=now.getDay();
-  if(day===0 || day===6 || academicCalendar.holidays.includes(dateKey(now)))
+  const now = new Date(), day = now.getDay();
+  const key = dateKey(now);
+
+  if(day===0 || day===6 || academicCalendar.holidays.includes(key))
     return {code:'HT', label:'土日祝ダイヤ'};
-  const classDay=isClassDay(now);
+
+  // 授業振替日の判定
+  const override = academicCalendar.classDayOverrides[key];
+  if (override) {
+    const dayNames = {
+      MON:'月曜日', TUE:'火曜日', WED:'水曜日',
+      THU:'木曜日', FRI:'金曜日'
+    };
+    return {
+      code: override === 'FRI' ? 'FRI_CLASS' : 'WD_CLASS',
+      label: `${dayNames[override]}の授業実施日`
+    };
+  }
+
+  // 通常日の判定（従来の処理）
+  const classDay = isClassDay(now);
   if(day===5) return classDay
     ? {code:'FRI_CLASS', label:'金曜（授業日）ダイヤ'}
     : {code:'FRI_OFF', label:'金曜（休校日）ダイヤ'};
+
   return classDay
     ? {code:'WD_CLASS', label:'月～木（授業日）ダイヤ'}
     : {code:'WD_OFF', label:'月～木（休校日）ダイヤ'};
