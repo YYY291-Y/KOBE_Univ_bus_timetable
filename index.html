@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#3d7d24">
+  <meta name="description" content="神戸大学向けバス時刻表 TSURU-Navi">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="stylesheet" href="./style.css">
+  <title>神大 バス時刻表 TSURU-Navi</title>
+</head>
+<body>
+<main class="wrap">
+  <header class="hero">
+    <div class="eyebrow">KOBE UNIVERSITY BUS TIMETABLE</div>
+    <h1>神大 バス時刻表 TSURU-Navi</h1>
+    <p>交通事情などで、表示内容と異なる場合があります。</p>
+  </header>
+
+  <section class="panel">
+    <p class="label">① 行き先を選択</p>
+    <div class="choices" id="destinations"></div>
+  </section>
+
+  <section class="panel">
+    <p class="label">② 出発停留所</p>
+    <select id="origin"></select>
+  </section>
+
+  <section class="panel">
+    <p class="label">③ 検索方法</p>
+    <div class="seg">
+      <button id="nextMode" class="active" type="button">次の5便</button>
+      <button id="timeMode" type="button">時刻を指定</button>
+    </div>
+    <p id="todayDiaText" class="dia-text"></p>
+    <div id="calendarNotice" class="calendar-notice" hidden></div>
+    <div id="timeBox" class="time-box" hidden>
+      <div>
+        <label class="label" for="dayTypeSub">運転日ダイヤ指定</label>
+        <select id="dayTypeSub">
+          <option value="AUTO" selected>自動判定（今日）</option>
+          <option value="WD_CLASS">月～木（授業日）</option>
+          <option value="WD_OFF">月～木（休校日）</option>
+          <option value="FRI_CLASS">金（授業日）</option>
+          <option value="FRI_OFF">金（休校日）</option>
+          <option value="HT">土日祝</option>
+        </select>
+      </div>
+      <div>
+        <label class="label" for="searchTime">指定時刻以降の便</label>
+        <input id="searchTime" type="time" value="08:30">
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="results-head">
+      <h2>バス一覧</h2>
+      <button id="refresh" class="refresh" type="button">↻ 更新</button>
+    </div>
+    <div class="muted" id="status" role="status" aria-live="polite"></div>
+    <div id="results"></div>
+  </section>
+
+  <details class="panel developer-panel">
+    <summary>開発者用：CSV試運転</summary>
+    <div class="developer-content">
+      <p class="muted">開発・動作確認用の機能です。CSVを読み込んだ内容は、この画面を開いている間だけ使用され、公開中のJSONファイルは変更されません。</p>
+      <label class="label" for="developerPassword">パスワード</label>
+      <div class="row">
+        <input id="developerPassword" type="password" autocomplete="current-password" placeholder="パスワードを入力">
+        <button id="unlockCsv" class="primary" type="button">ロック解除</button>
+      </div>
+      <p class="muted" id="csvAuthStatus" aria-live="polite"></p>
+      <div id="csvTools" hidden>
+        <label class="label" for="csvFile">試運転用CSV</label>
+        <input id="csvFile" type="file" accept=".csv,text/csv">
+        <p class="muted" id="csvStatus" aria-live="polite"></p>
+        <button id="restoreJson" type="button">外部JSONの時刻表に戻す</button>
+      </div>
+    </div>
+  </details>
+
+  <footer>
+    <p>時刻は登録された時刻表データに基づきます。</p>
+    <p>このサイトは非公式です。</p>
+    <p>交通局・大学へのお問い合わせはご遠慮ください。</p>
+  </footer>
+</main>
+
+<div id="appUpdateNotice" role="status">
+  <span>アプリの更新があります。</span>
+  <button id="appUpdateButton" type="button">更新する</button>
+</div>
+
+<script src="./app.js" defer></script>
+</body>
+</html>

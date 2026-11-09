@@ -1,0 +1,10 @@
+{
+  "name": "神大 バス時刻表 TSURU-Navi",
+  "short_name": "TSURU-Navi",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f9f2",
+  "theme_color": "#3d7d24"
+}
