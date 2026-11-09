@@ -225,9 +225,9 @@ function render() {
     return `
       <article class="bus">
         <div class="times">
-          <div><div class="time-label">発車</div><div class="time">${hhmm(String(item.depart).padStart(4, "0"))}</div></div>
+          <div><div class="time-label">発車</div><div class="time">${formatMinutes(item.depart)}</div></div>
           <div class="arrow">→</div>
-          <div><div class="time-label">${item.target}到着</div><div class="time">${hhmm(String(item.arrive).padStart(4, "0"))}</div></div>
+          <div><div class="time-label">${item.target}到着</div><div class="time">${formatMinutes(item.arrive)}</div></div>
         </div>
         <div class="busmeta">
           <div class="busmeta-header">
