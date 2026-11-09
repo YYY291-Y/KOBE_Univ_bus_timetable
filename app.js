@@ -31,6 +31,17 @@ function hhmm(value) {
   return /^\d{4}$/.test(String(value)) ? `${value.slice(0, 2)}:${value.slice(2)}` : value;
 }
 
+// 0時からの経過分数を HH:MM 形式に変換
+function formatMinutes(value) {
+  const total = Number(value);
+  if (!Number.isFinite(total)) return "--:--";
+
+  const hours = Math.floor(total / 60);
+  const minutes = total % 60;
+
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
 function toMinutes(value) {
   return /^\d{4}$/.test(String(value).trim())
     ? Number(String(value).trim().slice(0, 2)) * 60 + Number(String(value).trim().slice(2))
