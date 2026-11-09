@@ -1,4 +1,4 @@
-const CACHE_NAME = "tsurunavi-v2-0-2-fix1";
+const CACHE_NAME = "tsurunavi-v2-0-2-fix2";
 const APP_FILES = [
   "./",
   "./index.html",
